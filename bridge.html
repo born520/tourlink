@@ -53,21 +53,27 @@
       console.log('[투어링크]', msg);
     }
 
-    function getShareUrl() {
+    function getParams() {
       const params = new URLSearchParams(location.search);
       let shareUrl = params.get('url') || 'https://www.tourlink.kr';
+      
       try {
         new URL(shareUrl);
-        log('✓ URL 유효성 검증 완료');
       } catch (e) {
-        log('✗ 유효하지 않은 URL → 기본 페이지로 대체');
         shareUrl = 'https://www.tourlink.kr';
       }
-      return shareUrl;
+
+      return {
+        shareUrl: shareUrl,
+        title: params.get('title') || '추천 링크',
+        desc: params.get('desc') || '링크를 클릭해 내용을 확인해보세요.',
+        imgUrl: params.get('img') || ''
+      };
     }
 
-    const shareUrl = getShareUrl();
-    log('📤 스크랩 대상 URL: ' + shareUrl);
+    const { shareUrl, title, desc, imgUrl } = getParams();
+    log('📤 발송 정보 설정 완료');
+    log('🔗 이동할 주소: ' + shareUrl);
 
     function run() {
       try {
@@ -78,12 +84,30 @@
         }
         
         document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
-        log('⚡ 카카오 스크랩(Scrap) 공유 실행...');
 
-        // 카카오 디버거처럼 og값을 직접 긁어가도록 요청
-        Kakao.Share.sendScrap({
-          requestUrl: shareUrl
-        });
+        // 🔑 핵심: 클릭 시 이동 주소(link)를 사용자가 넣은 shareUrl로 고정
+        const shareObject = {
+          objectType: 'feed',
+          content: {
+            title: title,
+            description: desc,
+            imageUrl: imgUrl || 'https://www.tourlink.kr/favicon.ico', // 이미지가 비어있을 때 방어 코드
+            link: {
+              mobileWebUrl: shareUrl,
+              webUrl: shareUrl
+            }
+          },
+          buttons: [{
+            title: '확인하기',
+            link: {
+              mobileWebUrl: shareUrl,
+              webUrl: shareUrl
+            }
+          }]
+        };
+
+        log('📤 커스텀 피드 전송 시작...');
+        Kakao.Share.sendDefault(shareObject);
 
         document.getElementById('msg').textContent = '✅ 친구를 선택하고 전송하세요';
         log('✓ 공유 팝업 호출 완료');
@@ -99,7 +123,6 @@
       setTimeout(run, 500); 
     });
 
-    // 5초 후 자동 창 닫기 구조 유지
     setTimeout(() => {
       if (window.opener) {
         window.close();
