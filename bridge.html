@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>카카오 공유</title>
+  <title>투어링크 카카오 공유</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -27,6 +27,7 @@
     #msg { font-size: 15px; font-weight: 700; }
     #sub { font-size: 12px; color: #aaa; }
     #err { font-size: 12px; color: #f44336; margin-top: 8px; text-align: center; max-width: 300px; }
+    #debug { font-size: 10px; color: #666; margin-top: 16px; max-width: 300px; text-align: left; max-height: 150px; overflow-y: auto; font-family: monospace; }
   </style>
 </head>
 <body>
@@ -34,60 +35,137 @@
   <div id="msg">카카오 공유 준비 중...</div>
   <div id="sub"></div>
   <div id="err"></div>
+  <div id="debug"></div>
 
   <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"
           integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4"
           crossorigin="anonymous"></script>
   <script>
     const APP_KEY = 'cf840e74cf6ef3dcdd5cf2c128961fe1';
+    const DEBUG = true;
 
-    // URL 파라미터 파싱
-    const p = new URLSearchParams(location.search);
-    const shareUrl = p.get('url')    || 'https://www.1ink.kr';
-    const title    = p.get('title')  || '투어링크';
-    const desc     = p.get('desc')   || '';
-    const imgUrl   = p.get('img')    || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
+    function log(msg) {
+      if (DEBUG) {
+        const debugEl = document.getElementById('debug');
+        debugEl.textContent += msg + '\n';
+        debugEl.scrollTop = debugEl.scrollHeight;
+      }
+      console.log('[투어링크]', msg);
+    }
 
+    // URL 파라미터 안전하게 추출
+    function getUrlParams() {
+      const params = new URLSearchParams(location.search);
+      
+      // 각 파라미터를 개별적으로 처리 (안전한 디코딩)
+      let shareUrl = params.get('url') || 'https://www.tourlink.kr';
+      let title = params.get('title') || '투어링크';
+      let desc = params.get('desc') || '';
+      let imgUrl = params.get('img') || '';
+
+      // URL이 이미 한 번 디코딩되어 있으므로 그대로 사용
+      // 다만 URL 형식 검증
+      try {
+        new URL(shareUrl);
+        log('✓ URL 유효: ' + shareUrl.substring(0, 40) + '...');
+      } catch (e) {
+        log('✗ URL 유효하지 않음: ' + shareUrl);
+        shareUrl = 'https://www.tourlink.kr';
+      }
+
+      // 이미지 URL 검증
+      if (imgUrl) {
+        try {
+          new URL(imgUrl);
+          log('✓ 이미지 URL 유효');
+        } catch (e) {
+          log('✗ 이미지 URL 유효하지 않음, 제거됨');
+          imgUrl = '';
+        }
+      } else {
+        log('- 이미지 URL 없음');
+      }
+
+      return { shareUrl, title, desc, imgUrl };
+    }
+
+    const { shareUrl, title, desc, imgUrl } = getUrlParams();
+
+    log('📋 파라미터 파싱 완료');
+    log('제목: ' + title);
+    log('설명: ' + (desc ? desc.substring(0, 30) + '...' : '없음'));
+
+    // 🔑 핵심: 클릭했을 때 vs 공유할 때 구분
+    const isClickedLink = !title || title === '투어링크' && !desc;
+    
+    if (isClickedLink) {
+      // 클릭: 바로 최종 URL로 이동 (bridge.html 안 보임!)
+      log('🔗 링크 클릭 감지 → 바로 이동');
+      window.location.href = shareUrl;
+      throw new Error('redirect');
+    }
+
+    // 페이지 제목 업데이트
     document.getElementById('sub').textContent = title;
 
     function run() {
       try {
-        if (!Kakao.isInitialized()) Kakao.init(APP_KEY);
-        document.getElementById('msg').textContent = '카카오 공유 팝업 열기...';
+        log('🚀 카카오 SDK 초기화...');
+        
+        if (!Kakao.isInitialized()) {
+          Kakao.init(APP_KEY);
+          log('✓ Kakao 초기화 완료');
+        }
+        
+        document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
 
-        Kakao.Share.sendDefault({
+        // 카카오 공유 객체 구성
+        // 핵심: imageUrl이 빈 문자열이면 카카오가 자동으로 원본 URL의 OG 이미지를 스크랩함
+        const shareObject = {
           objectType: 'feed',
           content: {
             title: title,
             description: desc,
-            imageUrl: imgUrl,
-            link: {
-              mobileWebUrl: shareUrl,
+            imageUrl: imgUrl || undefined,  // 빈 문자열 대신 undefined (카카오가 자동 스크랩)
+            link: { 
+              mobileWebUrl: shareUrl, 
               webUrl: shareUrl
             }
           },
           buttons: [{
             title: '확인하기',
-            link: {
-              mobileWebUrl: shareUrl,
-              webUrl: shareUrl
+            link: { 
+              mobileWebUrl: shareUrl, 
+              webUrl: shareUrl 
             }
           }]
-        });
+        };
+
+        log('📤 공유 실행...');
+        Kakao.Share.sendDefault(shareObject);
 
         document.getElementById('msg').textContent = '✅ 친구를 선택하고 전송하세요';
         document.getElementById('sub').textContent = '';
+        log('✓ 공유 팝업 성공');
 
       } catch(e) {
         document.getElementById('err').textContent = '오류: ' + e.message;
+        log('✗ 오류: ' + e.message);
         console.error(e);
       }
     }
 
-    // SDK 로드 완료 후 실행
-    window.addEventListener('load', () => {
-      setTimeout(run, 500);
+    // 페이지 로드 후 실행
+    window.addEventListener('load', () => { 
+      setTimeout(run, 800); 
     });
+
+    // 5초 후 자동 창 닫기 (사용자가 공유하지 않으면)
+    setTimeout(() => {
+      if (window.opener) {
+        window.close();
+      }
+    }, 5000);
   </script>
 </body>
 </html>
