@@ -119,32 +119,22 @@
         
         document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
 
-        // 카카오 공유 객체 구성
-        // 핵심: 빈 필드는 아예 객체에 포함시키지 않기
         log('📊 shareObject 구성 중...');
         log('  - title: ' + (title ? '"' + title + '"' : 'undefined'));
         log('  - desc: ' + (desc && desc.trim() ? '"' + desc.substring(0, 20) + '"' : 'undefined'));
         log('  - imgUrl: ' + (imgUrl && imgUrl.trim() ? '"' + imgUrl.substring(0, 30) + '"' : 'undefined'));
         
-        const content = {
-          title: title,
-          link: { 
-            mobileWebUrl: shareUrl, 
-            webUrl: shareUrl
-          }
-        };
-        
-        // 빈 문자열이 아닐 때만 추가
-        if (desc && desc.trim()) {
-          content.description = desc;
-        }
-        if (imgUrl && imgUrl.trim()) {
-          content.imageUrl = imgUrl;
-        }
-        
+        // 카카오 공유 객체: 반드시 필드가 있어야 함
         const shareObject = {
           objectType: 'feed',
-          content: content,
+          content: {
+            title: title || '투어링크',
+            description: desc && desc.trim() ? desc : '투어링크에서 공유했습니다',
+            link: { 
+              mobileWebUrl: shareUrl, 
+              webUrl: shareUrl
+            }
+          },
           buttons: [{
             title: '확인하기',
             link: { 
@@ -152,6 +142,11 @@
               webUrl: shareUrl 
             }
           }]
+        };
+        
+        // imageUrl은 유효할 때만 추가
+        if (imgUrl && imgUrl.trim()) {
+          shareObject.content.imageUrl = imgUrl;
         };
 
         log('📤 공유 실행...');
