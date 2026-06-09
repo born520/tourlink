@@ -53,130 +53,53 @@
       console.log('[투어링크]', msg);
     }
 
-    // URL 파라미터 안전하게 추출
-    function getUrlParams() {
+    function getShareUrl() {
       const params = new URLSearchParams(location.search);
-      
       let shareUrl = params.get('url') || 'https://www.tourlink.kr';
-      let title = params.get('title') || '';
-      let desc = params.get('desc') || '';
-      let imgUrl = params.get('img') || '';
-
       try {
         new URL(shareUrl);
-        log('✓ URL 유효: ' + shareUrl.substring(0, 40) + '...');
+        log('✓ 발송 대상 URL 유효성 검증 완료');
       } catch (e) {
-        log('✗ URL 유효하지 않음: ' + shareUrl);
+        log('✗ 유효하지 않은 URL → 기본 페이지로 대체');
         shareUrl = 'https://www.tourlink.kr';
       }
-
-      if (imgUrl) {
-        try {
-          new URL(imgUrl);
-          log('✓ 이미지 URL 유효');
-        } catch (e) {
-          log('✗ 이미지 URL 유효하지 않음, 제거됨');
-          imgUrl = '';
-        }
-      } else {
-        log('- 이미지 URL 없음');
-      }
-
-      return { shareUrl, title, desc, imgUrl };
+      return shareUrl;
     }
 
-    const { shareUrl, title, desc, imgUrl } = getUrlParams();
-
-    log('📋 파라미터 파싱 완료');
-    log('제목: ' + (title ? '"' + title + '"' : '(없음)'));
-    log('설명: ' + (desc ? '"' + desc.substring(0, 30) + '..."' : '(없음)'));
-
-    // 🔑 핵심: 클릭했을 때 vs 공유할 때 구분
-    const isClickedLink = !title && !desc;
-    
-    log('🔍 판정: ' + (isClickedLink ? '링크 클릭 모드' : '공유 모드'));
-    
-    if (isClickedLink) {
-      log('🔗 링크 클릭 감지 → 바로 이동');
-      window.location.href = shareUrl;
-      throw new Error('redirect');
-    }
-    
-    log('📤 공유 모드: 카카오톡으로 공유합니다');
-    document.getElementById('sub').textContent = title;
+    const shareUrl = getShareUrl();
+    log('📤 스크랩 대상 URL: ' + shareUrl);
 
     function run() {
       try {
-        log('🚀 카카오 SDK 초기화...');
-        
+        log('🚀 카카오 SDK 초기화 중...');
         if (!Kakao.isInitialized()) {
           Kakao.init(APP_KEY);
-          log('✓ Kakao 초기화 완료');
+          log('✓ Kakao 초기화 성공');
         }
         
         document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
+        log('⚡ 카카오 스크랩(Scrap) 공유 실행...');
 
-        log('📊 shareObject 구성 중...');
-        
-        const shareObject = {
-          objectType: 'feed',
-          content: {
-            link: { 
-              mobileWebUrl: shareUrl, 
-              webUrl: shareUrl
-            }
-          },
-          buttons: [{
-            title: '확인하기',
-            link: { 
-              mobileWebUrl: shareUrl, 
-              webUrl: shareUrl 
-            }
-          }]
-        };
-
-        // title이 있으면 추가
-        if (title) {
-          shareObject.content.title = title;
-          log('  - title: ' + title);
-        }
-
-        // desc가 있으면 추가
-        if (desc) {
-          shareObject.content.description = desc;
-          log('  - description: ' + desc.substring(0, 30));
-        }
-
-        // imageUrl은 유효할 때만 추가
-        if (imgUrl && imgUrl.trim()) {
-          shareObject.content.imageUrl = imgUrl;
-          log('  - imageUrl: ' + imgUrl.substring(0, 30));
-        }
-
-        log('📤 공유 실행...');
-        log('🔍 shareObject:');
-        log(JSON.stringify(shareObject, null, 2));
-        console.log('[투어링크] shareObject:', shareObject);
-        
-        Kakao.Share.sendDefault(shareObject);
+        // 🔗 카카오 디버거처럼 og값을 카카오가 직접 긁어가도록 요청
+        Kakao.Share.sendScrap({
+          requestUrl: shareUrl
+        });
 
         document.getElementById('msg').textContent = '✅ 친구를 선택하고 전송하세요';
-        document.getElementById('sub').textContent = '';
-        log('✓ 공유 팝업 성공');
+        log('✓ 공유 팝업 호출 완료');
 
       } catch(e) {
         document.getElementById('err').textContent = '오류: ' + e.message;
-        log('✗ 오류: ' + e.message);
+        log('✗ 오류 발생: ' + e.message);
         console.error(e);
       }
     }
 
-    // 페이지 로드 후 실행
     window.addEventListener('load', () => { 
-      setTimeout(run, 800); 
+      setTimeout(run, 500); // 전송 안정성을 위해 약간의 지연 후 실행
     });
 
-    // 5초 후 자동 창 닫기
+    // 5초 후 자동 창 닫기 구조 유지
     setTimeout(() => {
       if (window.opener) {
         window.close();
