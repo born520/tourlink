@@ -120,13 +120,13 @@
         document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
 
         // 카카오 공유 객체 구성
-        // 핵심: imageUrl이 빈 문자열이면 카카오가 자동으로 원본 URL의 OG 이미지를 스크랩함
+        // 핵심: imageUrl이 비어있으면 undefined로 (카카오가 자동으로 OG 이미지를 스크랩함)
         const shareObject = {
           objectType: 'feed',
           content: {
             title: title,
             description: desc,
-            imageUrl: imgUrl || undefined,  // 빈 문자열 대신 undefined (카카오가 자동 스크랩)
+            imageUrl: imgUrl && imgUrl.trim() ? imgUrl : undefined,  // 빈 문자열 제거
             link: { 
               mobileWebUrl: shareUrl, 
               webUrl: shareUrl
