@@ -125,44 +125,32 @@
         
         document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
 
-        log('📊 shareObject 구성 중...');
+        log('📊 linkObject 구성 중...');
         log('  - title: ' + (title ? '"' + title + '"' : 'undefined'));
         log('  - desc: ' + (desc && desc.trim() ? '"' + desc.substring(0, 20) + '"' : 'undefined'));
         log('  - imgUrl: ' + (imgUrl && imgUrl.trim() ? '"' + imgUrl.substring(0, 30) + '"' : 'undefined'));
         
-        // 카카오 공유 객체: 반드시 필드가 있어야 함
-        const shareObject = {
-          objectType: 'feed',
-          content: {
-            title: title || '투어링크',
-            description: desc || '투어링크에서 공유했습니다',
-            link: { 
-              mobileWebUrl: shareUrl, 
-              webUrl: shareUrl
-            }
-          },
-          buttons: [{
-            title: '확인하기',
-            link: { 
-              mobileWebUrl: shareUrl, 
-              webUrl: shareUrl 
-            }
-          }]
+        // 카카오 공유 객체: sendLink 방식
+        const linkObject = {
+          webUrl: shareUrl,
+          mobileWebUrl: shareUrl,
+          title: title || '투어링크',
+          description: desc || '투어링크에서 공유했습니다'
         };
         
         // imageUrl은 유효할 때만 추가
         if (imgUrl && imgUrl.trim()) {
-          shareObject.content.imageUrl = imgUrl;
+          linkObject.imageUrl = imgUrl;
         }
 
-        log('📤 공유 실행...');
-        log('🔍 shareObject:');
-        log(JSON.stringify(shareObject, null, 2));
-        console.log('[투어링크] shareObject 전체:', shareObject);
-        console.log('[투어링크] imageUrl:', shareObject.content.imageUrl, 'type:', typeof shareObject.content.imageUrl);
-        console.log('[투어링크] description:', shareObject.content.description, 'type:', typeof shareObject.content.description);
+        log('📤 sendLink 실행...');
+        log('🔍 linkObject:');
+        log(JSON.stringify(linkObject, null, 2));
+        console.log('[투어링크] linkObject 전체:', linkObject);
+        console.log('[투어링크] imageUrl:', linkObject.imageUrl, 'type:', typeof linkObject.imageUrl);
+        console.log('[투어링크] description:', linkObject.description, 'type:', typeof linkObject.description);
         
-        Kakao.Share.sendDefault(shareObject);
+        Kakao.Share.sendLink(linkObject);
 
         document.getElementById('msg').textContent = '✅ 친구를 선택하고 전송하세요';
         document.getElementById('sub').textContent = '';
