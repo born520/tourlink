@@ -96,7 +96,9 @@
     log('설명: ' + (desc ? desc.substring(0, 30) + '...' : '없음'));
 
     // 🔑 핵심: 클릭했을 때 vs 공유할 때 구분
-    const isClickedLink = !title || title === '투어링크' && !desc;
+    // 클릭: title과 desc 모두 없음 (OG 메타데이터 없는 사이트)
+    // 공유: title 또는 desc 중 하나 이상 있음
+    const isClickedLink = (!title || title === '투어링크') && (!desc || desc === '');
     
     if (isClickedLink) {
       // 클릭: 바로 최종 URL로 이동 (bridge.html 안 보임!)
@@ -104,6 +106,8 @@
       window.location.href = shareUrl;
       throw new Error('redirect');
     }
+    
+    log('📤 공유 모드: 카카오톡으로 공유합니다');
 
     // 페이지 제목 업데이트
     document.getElementById('sub').textContent = title;
