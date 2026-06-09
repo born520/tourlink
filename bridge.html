@@ -92,13 +92,15 @@
     const { shareUrl, title, desc, imgUrl } = getUrlParams();
 
     log('📋 파라미터 파싱 완료');
-    log('제목: ' + title);
-    log('설명: ' + (desc ? desc.substring(0, 30) + '...' : '없음'));
+    log('제목: ' + (title ? '"' + title + '"' : '(없음)'));
+    log('설명: ' + (desc ? '"' + desc.substring(0, 30) + '..."' : '(없음)'));
 
     // 🔑 핵심: 클릭했을 때 vs 공유할 때 구분
-    // 클릭: title과 desc 모두 없음 (URL만 있고 메타데이터 없음)
+    // 클릭: title과 desc 모두 비어있음 (URL만 있고 메타데이터 없음)
     // 공유: title 또는 desc 중 하나 이상 있음
     const isClickedLink = !title && !desc;
+    
+    log('🔍 판정: ' + (isClickedLink ? '링크 클릭 모드' : '공유 모드'));
     
     if (isClickedLink) {
       // 클릭: 바로 최종 URL로 이동 (bridge.html 안 보임!)
@@ -133,7 +135,7 @@
           objectType: 'feed',
           content: {
             title: title || '투어링크',
-            description: desc && desc.trim() ? desc : '투어링크에서 공유했습니다',
+            description: desc || '투어링크에서 공유했습니다',
             link: { 
               mobileWebUrl: shareUrl, 
               webUrl: shareUrl
@@ -151,7 +153,7 @@
         // imageUrl은 유효할 때만 추가
         if (imgUrl && imgUrl.trim()) {
           shareObject.content.imageUrl = imgUrl;
-        };
+        }
 
         log('📤 공유 실행...');
         log('🔍 shareObject:');
