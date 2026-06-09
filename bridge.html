@@ -68,8 +68,7 @@
 
     const { shareUrl, title, desc, imgUrl } = getParams();
     
-    // 🔑 가이드라인 준수: 우선순위 버그 해결본 적용
-    // 제목과 설명이 둘 다 없거나 기본값일 때만 '링크 직접 클릭 이동 모드'로 판정
+    // 가이드라인 버그수정본 준수: 제목과 설명이 모두 없을 때만 직접 이동 판정
     const isClickedLink = (!title || title === '투어링크') && (!desc || desc === '');
     
     log('🔍 판정 결과: ' + (isClickedLink ? '링크 다이렉트 이동 모드' : '카카오톡 공유 모드'));
@@ -88,7 +87,7 @@
         
         document.getElementById('msg').textContent = '📱 카카오 공유 팝업 열기...';
 
-        // ⚠️ 가이드 경고 준수: 카카오 SDK는 빈 문자열('') 필드가 있으면 뻗어버리므로 완전 차단
+        // ⚠️ 가이드 경고 준수: 필수 필드 기본값 보정 및 빈 문자열 방어
         const shareObject = {
           objectType: 'feed',
           content: {
@@ -96,10 +95,18 @@
             description: desc || '링크를 확인해보세요.',
             link: { mobileWebUrl: shareUrl, webUrl: shareUrl }
           },
-          buttons: [{
-            title: '확인하기',
-            link: { mobileWebUrl: shareUrl, webUrl: shareUrl }
-          }]
+          // 🔑 수정 포인트: buttons 배열에 버튼 2개 정의 (최대 2개 제한)
+          buttons: [
+            {
+              title: '브로슈어 보기', // 1번 버튼 (왼쪽)
+              link: { mobileWebUrl: shareUrl, webUrl: shareUrl }
+            },
+            {
+              title: '카톡 상담하기', // 2번 버튼 (오른쪽)
+              // 테스트용으로 투어링크 공식 채널 주소 혹은 shareUrl을 연결
+              link: { mobileWebUrl: 'https://pf.kakao.com/_xeExbexj', webUrl: 'https://pf.kakao.com/_xeExbexj' }
+            }
+          ]
         };
 
         // 이미지 주소가 확실히 있을 때만 안전하게 필드 주입
@@ -107,7 +114,9 @@
           shareObject.content.imageUrl = imgUrl.trim();
         }
 
-        log('📤 커스텀 피드 전송 파라미터 검증 완료');
+        log('📤 버튼 2개 파라미터 구성 완료');
+        console.log('[투어링크] shareObject 구조:', shareObject);
+        
         Kakao.Share.sendDefault(shareObject);
         document.getElementById('msg').textContent = '✅ 친구를 선택하고 전송하세요';
 
